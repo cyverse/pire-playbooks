@@ -1,0 +1,11 @@
+---
+- name: start the webdav services
+  hosts: webdav
+  become: true
+  tasks:
+    - name: start apache
+      service:
+        name: httpd
+        state: started
+        enabled: true
+        

@@ -1,0 +1,10 @@
+---
+- name: stop the webdav services
+  hosts: webdav
+  become: true
+  tasks:
+    - name: stop apache
+      service:
+        name: httpd
+        state: stopped
+        enabled: false

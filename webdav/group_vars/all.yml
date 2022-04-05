@@ -1,0 +1,29 @@
+---
+_build_dir: "{{ build_dir | default('/tmp') }}"
+
+_canonical_hostname: "{{ canonical_hostname | default(groups['irods_catalog'][0]) }}"
+_canonical_irods_port: "{{ canonical_irods_port | default(_irods_zone_port) }}"
+
+_irods_resource_hierarchies: >-
+  {{ 
+    irods_resource_hierarchies
+      if irods_resource_hierarchies is defined and irods_resource_hierarchies|length > 0 else
+    [ { "name": "demoResc" } ] }}
+_irods_zone_name: "{{ irods_zone_name | default('tempZone') }}"
+
+_pire_manager: "{{ pire_manager | default(None) }}"
+_pire_resource_hierarchy: "{{ pire_resource_hierarchy | default(_irods_resource_hierarchies[0]) }}"
+
+_webdav_access_limit: "{{ webdav_access_limit | default(None) }}"
+_webdav_allowed_src: "{{ webdav_allowed_src | default(['0.0.0.0/0']) }}"
+_webdav_auth_name: "{{ webdav_auth_name | default('CyVerse') }}"
+_webdav_davrods_access_limit: "{{ webdav_davrods_access_limit | default(None) }}"
+_webdav_max_request_workers: "{{ webdav_max_request_workers | default(192) }}"
+_webdav_server_limit: "{{ webdav_server_limit | default(48) }}"
+_webdav_threads_per_child: "{{ webdav_threads_per_child | default(4) }}"
+_webdav_tls_cert_file: "{{ webdav_tls_cert_file | default('/etc/ssl/certs/dummy.crt') }}"
+_webdav_tls_chain_file: "{{ webdav_tls_chain_file | default('/etc/ssl/certs/dummy-chain.crt') }}"
+_webdav_tls_key_file: "{{ webdav_tls_key_file | default('/etc/ssl/certs/dummy.key') }}"
+
+# The following are internal constants
+_irods_zone_port: 1247
