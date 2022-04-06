@@ -165,7 +165,7 @@
                 # RequestHeader merge Cache-Control no-store
               </Elseif>
 
-              ProxyPass / http://127.0.0.1:{{ _webdav_varnish_service_port }}/ retry=0 timeout=300
+              ProxyPass / http://127.0.0.1/ retry=0 timeout=300
               ProxyHTMLURLMap ^http: https: [R]
 
               Header edit Location ^http: https:
@@ -258,7 +258,7 @@
       vars:
         irods_cfg_environment_file: etc/httpd/irods/irods_environment.json
         irods_cfg_chown: false
-        irods_cfg_host: "{{ _canonical_hostname }}"
+        irods_cfg_host: "{{ _irods_host_name }}"
         irods_cfg_zone_name: "{{ _irods_zone_name }}"
         irods_cfg_zone_user: anonymous
         irods_cfg_home: /{{ _irods_zone_name }}

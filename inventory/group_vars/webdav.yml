@@ -1,4 +1,6 @@
 ---
+canonical_hostname: pire.cyverse.org
+
 irods_host_name: data.cyverse.org
 irods_zone_name: iplant
 
