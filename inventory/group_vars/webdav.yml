@@ -1,0 +1,6 @@
+---
+irods_zone_name: iplant
+
+webdav_tls_chain_file: "/etc/pki/tls/certs/cyverse.org.crt"
+webdav_tls_key_file: "/etc/pki/tls/private/cyverse.key"
+webdav_tls_cert_file: "/etc/pki/tls/certs/gd_bundle_g2-g1.crt"
