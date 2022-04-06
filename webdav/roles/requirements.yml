@@ -1,7 +1,11 @@
 ---
-- name: cyverse.irods_cfg
-  src: https://github.com/CyVerse-Ansible/ansible-irods-cfg
-  version: 71687e208cc1fe10bbfcf944d484539d5db0c923
+roles:
+  - name: cyverse.irods_cfg
+    src: https://github.com/CyVerse-Ansible/ansible-irods-cfg
+    version: 71687e208cc1fe10bbfcf944d484539d5db0c923
 
-- name: geerlingguy.apache
-  src: geerlingguy.apache
+  - name: geerlingguy.apache
+    src: geerlingguy.apache
+
+collections:
+  - name: community.general
