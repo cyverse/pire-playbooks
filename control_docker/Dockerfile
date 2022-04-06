@@ -1,0 +1,13 @@
+FROM ubuntu:20.04
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update
+RUN apt-get install --yes \
+      python3 python3-pip rpm git \
+      openconnect
+
+RUN pip3 install ansible
+
+COPY . /pire-playbooks
+RUN /pire-playbooks/init-roles

@@ -1,22 +1,28 @@
 # PIRE Playbooks
 This is a collection of playbooks for maintaining PIRE project.
 
-## Prerequisites
+## Control Docker Container
 
-The following system packages need to be installed on control machine.
+Run `docker build` to build control docker container.
 
-* `python3`
-* `python3-pip`
-* `rpm-build` (rpm) if control machine runs Debian or Ubuntu)
+```bash
+docker build -f ./control_docker/Dockerfile -t pire_control  .
+```
 
-The following python packages need to be installed on the control machine using `python3 -m pip`.
-
-* `ansible`
+Then run `docker run` to get into the container.
+```bash
+docker run -ti --privileged pire_control /bin/bash
+```
 
 ## Run
+
+Use VPN if you want to access from off-campus.
+```bash
+openconnect vpn.arizona.edu
+```
 
 Run `ansible-playbook` to execute playbooks.
 
 ```bash
-ansible-playbook -i inventory/pire_webdav webdav/webdav.yml --ask-become-pass
+ansible-playbook -i inventory/pire_webdav webdav/webdav.yml
 ```
