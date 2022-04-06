@@ -1,4 +1,5 @@
 ---
+irods_host_name: data.cyverse.org
 irods_zone_name: iplant
 
 webdav_tls_chain_file: "/etc/pki/tls/certs/cyverse.org.crt"
