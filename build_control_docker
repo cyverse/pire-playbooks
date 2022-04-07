@@ -1,0 +1,26 @@
+#! /bin/bash
+#
+# Usage:
+#  build
+#
+# Builds docker image for control
+
+set -o errexit -o nounset -o pipefail
+
+if [[ "$OSTYPE" == "darwin"* ]]
+then
+  readonly ExecName=$(greadlink -f "$0")
+else
+  readonly ExecName=$(readlink --canonicalize "$0")
+fi
+
+
+main()
+{
+  local baseDir=$(dirname "$ExecName")
+
+  docker build --file "$baseDir"/control_docker/Dockerfile --tag pire_control "$baseDir"
+}
+
+
+main "$@"

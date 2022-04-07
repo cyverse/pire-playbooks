@@ -1,0 +1,28 @@
+#! /bin/bash
+#
+# Usage:
+#  build
+#
+# Builds docker image for control
+
+set -o errexit -o nounset -o pipefail
+
+if [[ "$OSTYPE" == "darwin"* ]]
+then
+  readonly ExecName=$(greadlink -f "$0")
+else
+  readonly ExecName=$(readlink --canonicalize "$0")
+fi
+
+
+main()
+{
+  local baseDir=$(dirname "$ExecName")
+
+  docker run -ti --privileged --name pire_controller -d pire_control
+  docker cp ~/.ssh pire_controller:/root/
+  docker exec -ti pire_controller /bin/bash -c "chown -R root:root /root/.ssh"
+}
+
+
+main "$@"
