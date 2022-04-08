@@ -31,6 +31,15 @@
             MaxRequestWorkers       {{ _webdav_max_request_workers }}
           </IfModule>
 
+          <IfModule alias_module>
+            Alias "/dav/{{ _irods_zone_name }}/projects_redirected/" "{{ _webdav_local_irods_vault_path }}/"
+            <Directory "{{ _webdav_local_irods_vault_path }}/">
+              Require all granted
+              AllowOverride All
+              Options +Indexes
+            </Directory>
+          </IfModule>
+
           QS_ErrorResponseCode 429
 
           ForensicLog logs/forensic_log
@@ -48,16 +57,16 @@
           ProxyHTMLLinks a href
           ProxyHTMLLinks base href
         apache_vhosts:
-          - servername: "{{ _canonical_hostname }}"
-            extra_parameters: |
-              ServerAlias {{ inventory_hostname }}
-
-              ErrorLog logs/http_error_log
-              CustomLog logs/http_request_log {{ '"%{%Y-%m-%d %T}t.%{usec_frac}t %a \"%r\" %>s %L %{forensic-id}n"' }}
-              LogLevel warn
-
-              RedirectPermanent / https://{{ _canonical_hostname }}/
-            comment: Redirect HTTP to HTTPS
+          #- servername: "{{ _canonical_hostname }}"
+          #  extra_parameters: |
+          #    ServerAlias {{ inventory_hostname }}
+          #
+          #    ErrorLog logs/http_error_log
+          #    CustomLog logs/http_request_log {{ '"%{%Y-%m-%d %T}t.%{usec_frac}t %a \"%r\" %>s %L %{forensic-id}n"' }}
+          #    LogLevel warn
+          #
+          #    RedirectPermanent / https://{{ _canonical_hostname }}/
+          #  comment: Redirect HTTP to HTTPS
           - servername: "{{ _canonical_hostname }}"
             listen_ip: 127.0.0.1
             extra_parameters: |
@@ -76,45 +85,44 @@
               UseCanonicalName On
 
               # Redirect dav-anon to dav
-              <LocationMatch "/dav-anon/{{ _irods_zone_name }}/((commons/(community_released|cyverse_curated)|home|projects)(/.*)?)" >
-                Require expr %{REQUEST_URI} !~ m#^/dav-anon/{{ _irods_zone_name }}/home(/[^/]*/?)?$#
-
-                RequestHeader set Authorization "Basic {{ 'anonymous' | b64encode }}"
-
-                ProxyPassMatch http://127.0.0.1/dav/{{ _irods_zone_name }}/$1 retry=0
-                ProxyHTMLURLMap ^((http://)?[^/]*)/dav/ $1/dav-anon/ [R]
-
-                <If "%{REQUEST_METHOD} == 'PROPFIND'">
-                  SetOutputFilter Sed
-                  OutputSed "s,/dav/,/dav-anon/,g"
-                </If>
-
-                Header edit Location ^(.*)/dav $1/dav-anon
-              </LocationMatch>
+              #<LocationMatch "/dav-anon/{{ _irods_zone_name }}/((commons/(community_released|cyverse_curated)|home|projects)(/.*)?)" >
+              #  Require expr %{REQUEST_URI} !~ m#^/dav-anon/{{ _irods_zone_name }}/home(/[^/]*/?)?$#
+              #
+              #  RequestHeader set Authorization "Basic {{ 'anonymous' | b64encode }}"
+              #
+              #  ProxyPassMatch http://127.0.0.1/dav/{{ _irods_zone_name }}/$1 retry=0
+              #  ProxyHTMLURLMap ^((http://)?[^/]*)/dav/ $1/dav-anon/ [R]
+              #
+              #  <If "%{REQUEST_METHOD} == 'PROPFIND'">
+              #    SetOutputFilter Sed
+              #    OutputSed "s,/dav/,/dav-anon/,g"
+              #  </If>
+              #
+              #  Header edit Location ^(.*)/dav $1/dav-anon
+              #</LocationMatch>
             comment: The WebDAV host
             locations:
-              - path: /dav/{{ _irods_zone_name }}/commons/community_released
-                comment: Anonymous read-only access to the community released data
-                extra_parameters: |
-                  {% from 'davrods.j2' import davrods with context %}
-                  RedirectPermanent \
-                    /dav/{{ _irods_zone_name }}/commons/community_released/commons_repo/curated \
-                    /dav/{{ _irods_zone_name }}/commons/cyverse_curated
-
-                  {{ davrods('/' ~ _irods_zone_name ~ '/home/shared', 'community-head.html') }}
-              - path: /dav/{{ _irods_zone_name }}/commons/cyverse_curated
-                comment: Anonymous read-only access to the data curated by CyVerse
-                extra_parameters: |
-                  {% from 'davrods.j2' import davrods with context %}
-                  {{ davrods('/' ~ _irods_zone_name ~ '/home/shared/commons_repo/curated',
-                             'curated-head.html') }}
+              #- path: /dav/{{ _irods_zone_name }}/commons/community_released
+              #  comment: Anonymous read-only access to the community released data
+              #  extra_parameters: |
+              #    {% from 'davrods.j2' import davrods with context %}
+              #    RedirectPermanent \
+              #      /dav/{{ _irods_zone_name }}/commons/community_released/commons_repo/curated \
+              #      /dav/{{ _irods_zone_name }}/commons/cyverse_curated
+              #
+              #    {{ davrods('/' ~ _irods_zone_name ~ '/home/shared', 'community-head.html') }}
+              #- path: /dav/{{ _irods_zone_name }}/commons/cyverse_curated
+              #  comment: Anonymous read-only access to the data curated by CyVerse
+              #  extra_parameters: |
+              #    {% from 'davrods.j2' import davrods with context %}
+              #    {{ davrods('/' ~ _irods_zone_name ~ '/home/shared/commons_repo/curated',
+              #               'curated-head.html') }}
               - path: /dav/{{ _irods_zone_name }}/home
                 comment: Authenticated read-write access to the home collection
                 extra_parameters: |
                   {% from 'davrods.j2' import davrods with context %}
-                  RedirectPermanent /dav/{{ _irods_zone_name }}/home/shared \
-                                    /dav/{{ _irods_zone_name }}/projects
-
+                  #RedirectPermanent /dav/{{ _irods_zone_name }}/home/shared \
+                  #                  /dav/{{ _irods_zone_name }}/projects
                   {{ davrods('Home', 'home-head.html',
                        [ 'expr %{REQUEST_URI} !~ m#^/dav/' ~ _irods_zone_name ~ '/home(/[^/]*/?)?$# || %{REMOTE_USER} != "anonymous"',
                          'valid-user' ]) }}
@@ -122,18 +130,32 @@
                 comment: Authenticated read-write access to the project folders
                 extra_parameters: |
                   {% from 'davrods.j2' import davrods with context %}
+                  # Redirect read access to local iRODS resource server's data 
+                  <If "%{REQUEST_METHOD} == 'GET'">
+                    RedirectPermanent \
+                      /dav/{{ _irods_zone_name }}/projects/commons_repo \
+                      /dav/{{ _irods_zone_name }}/projects_redirected/home/shared/commons_repo
+                    RedirectPermanent \
+                      /dav/{{ _irods_zone_name }}/projects/eht \
+                      /dav/{{ _irods_zone_name }}/projects_redirected/home/shared/eht
+                    RedirectPermanent \
+                      /dav/{{ _irods_zone_name }}/projects/bhpire \
+                      /dav/{{ _irods_zone_name }}/projects_redirected/home/shared/bhpire
+                  </If>
                   {{ davrods('/' ~ _irods_zone_name ~ '/home/shared', 'projects-head.html',
                        [ 'valid-user' ]) }}
+              - path: /dav/{{ _irods_zone_name }}/projects_redirected
+                comment: Redirected read access to some project folders stored in local file system
               - path: /server-status
                 comment: Service status monitoring
                 extra_parameters: |
-                    SetHandler server-status
-                    Require host localhost
+                  SetHandler server-status
+                  Require host localhost
               - path: /server-qos
                 comment: Service QOS monitoring
                 extra_parameters: |
-                    SetHandler qos-viewer
-                    Require host localhost
+                  SetHandler qos-viewer
+                  Require host localhost
 
         apache_vhosts_ssl:
           - servername: "{{ _canonical_hostname }}"
@@ -141,7 +163,7 @@
             certificate_key_file: "{{ _webdav_tls_key_file }}"
             certificate_chain_file: "{{ _webdav_tls_chain_file }}"
             extra_parameters: |
-              ServerAlias {{ inventory_hostname }}
+              #ServerAlias {{ inventory_hostname }}
 
               {% if _webdav_access_limit %}
               QS_LocRequestLimit /dav {{ _webdav_access_limit }}
