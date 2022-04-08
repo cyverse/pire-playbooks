@@ -8,4 +8,4 @@ webdav_tls_chain_file: "/etc/pki/tls/certs/gd_bundle_g2-g1.crt"
 webdav_tls_key_file: "/etc/pki/tls/private/cyverse.key"
 webdav_tls_cert_file: "/etc/pki/tls/certs/cyverse.org.crt"
 
-webdav_local_irods_vault_path: "/irods_vault/pire"
+webdav_local_irods_vault_project_path: "/irods_vault/pire/home/shared"

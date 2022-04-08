@@ -4,6 +4,16 @@
   become: true
   collections:
     - community.general
+  vars:
+    projects_redirected_htpasswd: |
+      iychoi:$apr1$EP4KsytS$eOGc7ZAZujFM0uyy6viV51
+
+    projects_redirected_htaccess: |
+      AuthName {{ _webdav_auth_name }}
+      AuthType Basic
+      AuthUserFile {{ _webdav_local_irods_vault_project_path }}/.htpasswd
+      Require valid-user
+
   roles:
     - role: geerlingguy.apache
       vars:
@@ -32,8 +42,8 @@
           </IfModule>
 
           <IfModule alias_module>
-            Alias "/dav/{{ _irods_zone_name }}/projects_redirected/" "{{ _webdav_local_irods_vault_path }}/"
-            <Directory "{{ _webdav_local_irods_vault_path }}/">
+            Alias "/dav/{{ _irods_zone_name }}/projects_redirected/" "{{ _webdav_local_irods_vault_project_path }}/"
+            <Directory "{{ _webdav_local_irods_vault_project_path }}/">
               Require all granted
               AllowOverride All
               Options +Indexes
@@ -131,16 +141,16 @@
                 extra_parameters: |
                   {% from 'davrods.j2' import davrods with context %}
                   # Redirect read access to local iRODS resource server's data 
-                  <If "%{REQUEST_METHOD} == 'GET'">
+                  <If "%{REQUEST_METHOD} == 'GET' || %{REQUEST_METHOD} == 'HEAD'" >
                     RedirectPermanent \
                       /dav/{{ _irods_zone_name }}/projects/commons_repo \
-                      /dav/{{ _irods_zone_name }}/projects_redirected/home/shared/commons_repo
+                      /dav/{{ _irods_zone_name }}/projects_redirected/commons_repo
                     RedirectPermanent \
                       /dav/{{ _irods_zone_name }}/projects/eht \
-                      /dav/{{ _irods_zone_name }}/projects_redirected/home/shared/eht
+                      /dav/{{ _irods_zone_name }}/projects_redirected/eht
                     RedirectPermanent \
                       /dav/{{ _irods_zone_name }}/projects/bhpire \
-                      /dav/{{ _irods_zone_name }}/projects_redirected/home/shared/bhpire
+                      /dav/{{ _irods_zone_name }}/projects_redirected/bhpire
                   </If>
                   {{ davrods('/' ~ _irods_zone_name ~ '/home/shared', 'projects-head.html',
                        [ 'valid-user' ]) }}
@@ -306,6 +316,22 @@
     - include_tasks: tasks/install_webdav_html.yml
       vars:
         svc: dav-anon
+
+    - name: add .htpasswd for read access to local iRODS Vault
+      copy:
+        content: "{{ projects_redirected_htpasswd }}"
+        dest: "{{ _webdav_local_irods_vault_project_path }}/.htpasswd"
+        owner: irods
+        group: irods
+        mode: "0644"
+      
+    - name: add .htaccess for read access to local iRODS Vault
+      copy:
+        content: "{{ projects_redirected_htaccess }}"
+        dest: "{{ _webdav_local_irods_vault_project_path }}/.htaccess"
+        owner: irods
+        group: irods
+        mode: "0644"
 
     - name: add root web page
       copy:

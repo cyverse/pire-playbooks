@@ -26,7 +26,7 @@ _webdav_tls_cert_file: "{{ webdav_tls_cert_file | default('/etc/ssl/certs/dummy.
 _webdav_tls_chain_file: "{{ webdav_tls_chain_file | default('/etc/ssl/certs/dummy-chain.crt') }}"
 _webdav_tls_key_file: "{{ webdav_tls_key_file | default('/etc/ssl/certs/dummy.key') }}"
 
-_webdav_local_irods_vault_path: "{{ webdav_local_irods_vault_path | default('/irods_vault') }}"
+_webdav_local_irods_vault_project_path: "{{ webdav_local_irods_vault_project_path | default('/irods_vault') }}"
 
 # The following are internal constants
 _irods_zone_port: 1247
