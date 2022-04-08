@@ -3,20 +3,28 @@ This is a collection of playbooks for maintaining PIRE project.
 
 ## Control Docker Container
 
-Run `docker build` to build control docker container.
+Execute a build script `build_control_docker` to build control docker container. The command below will create a docker container image `pire_control`.
 
 ```bash
-docker build -f ./control_docker/Dockerfile -t pire_control  .
+./build_control_docker
 ```
 
-Then run `docker run` to get into the container.
+Then execute a run script `run_control_docker` to run the control container. This command will also copy your `~/.ssh` directory into the image to setup an access to `pire` server. Be careful!
+
 ```bash
-docker run -ti --privileged pire_control /bin/bash
+./run_control_docker
 ```
 
-## Run
+Lastly, execute a script `terminal_control_docker` to get into the control container. This command will give you a `bash` terminal. 
+
+```bash
+./terminal_control_docker
+```
+
+## Run in the Control Docker Container 
 
 Use VPN if you want to access from off-campus.
+
 ```bash
 openconnect vpn.arizona.edu
 ```
