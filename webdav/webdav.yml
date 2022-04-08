@@ -324,6 +324,7 @@
         owner: irods
         group: irods
         mode: "0644"
+        force: no
       
     - name: add .htaccess for read access to local iRODS Vault
       copy:
