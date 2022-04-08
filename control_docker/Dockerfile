@@ -12,4 +12,6 @@ RUN pip3 install ansible
 COPY . /pire-playbooks
 RUN /pire-playbooks/init-roles
 
+WORKDIR /pire-playbooks
+
 CMD ["/bin/bash"]
