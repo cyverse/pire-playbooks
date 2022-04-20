@@ -23,12 +23,12 @@
 
     <ul>
       <li>
-        <a href="{{ _irods_zone_name }}/commons/community_released/">{{ _irods_zone_name
+        <a href="https://data.cyverse.org/dav/{{ _irods_zone_name }}/commons/community_released/">{{ _irods_zone_name
           }}/commons/community_released/</a>
         provide access to public data hosted at CyVerse but curated by community members.
       </li>
       <li>
-        <a href="{{ _irods_zone_name }}/commons/cyverse_curated/">{{ _irods_zone_name
+        <a href="https://data.cyverse.org/dav/{{ _irods_zone_name }}/commons/cyverse_curated/">{{ _irods_zone_name
           }}/commons/cyverse_curated/</a>
         provide access to public data hosted at CyVerse and curated here.
       </li>
@@ -37,7 +37,7 @@
         access to project data hosted at CyVerse.
       </li>
       <li>
-        {% if svc != "dav-anon" %}<a href="{{ _irods_zone_name }}/home/">{% endif %}{{
+        {% if svc != "dav-anon" %}<a href="https://data.cyverse.org/dav/{{ _irods_zone_name }}/home/">{% endif %}{{
           _irods_zone_name }}/home/{% if svc != "dav-anon" %}</a>{% endif %}
         provide access to user data hosted at CyVerse. In order to reduce the risk of user data
         inadvertently being exposed to web crawlers, the top-level folder and

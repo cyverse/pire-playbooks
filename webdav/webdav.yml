@@ -41,21 +41,11 @@
             MaxRequestWorkers       {{ _webdav_max_request_workers }}
           </IfModule>
 
-          <IfModule alias_module>
-            Alias "/dav/{{ _irods_zone_name }}/projects_redirected/" "{{ _webdav_local_irods_vault_project_path }}/"
-            <Directory "{{ _webdav_local_irods_vault_project_path }}/">
-              Require all granted
-              AllowOverride All
-              Options +Indexes
-            </Directory>
-          </IfModule>
-
-          QS_ErrorResponseCode 429
-
           ForensicLog logs/forensic_log
           ErrorLogFormat "%{cu}t %-L [pid %P] [%-m:%l] %-a %E: %M"
 
           Listen 443 https
+          Listen 8047
 
           SSLPassPhraseDialog exec:/usr/libexec/httpd-ssl-pass-dialog
           SSLRandomSeed connect builtin
@@ -66,23 +56,19 @@
           ProxyHTMLEnable On
           ProxyHTMLLinks a href
           ProxyHTMLLinks base href
+
         apache_vhosts:
-          #- servername: "{{ _canonical_hostname }}"
-          #  extra_parameters: |
-          #    ServerAlias {{ inventory_hostname }}
-          #
-          #    ErrorLog logs/http_error_log
-          #    CustomLog logs/http_request_log {{ '"%{%Y-%m-%d %T}t.%{usec_frac}t %a \"%r\" %>s %L %{forensic-id}n"' }}
-          #    LogLevel warn
-          #
-          #    RedirectPermanent / https://{{ _canonical_hostname }}/
-          #  comment: Redirect HTTP to HTTPS
           - servername: "{{ _canonical_hostname }}"
             listen_ip: 127.0.0.1
+            listen_port: 8047
             extra_parameters: |
-              {% if _webdav_davrods_access_limit %}
-              QS_LocRequestLimit /dav {{ _webdav_davrods_access_limit }}
-              {% endif %}
+              DocumentRoot {{ _webdav_local_irods_vault_project_path }}
+
+              <Directory {{ _webdav_local_irods_vault_project_path }}>
+                Require all granted
+                AllowOverride All
+                Options +Indexes
+              </Directory>
 
               ErrorLog logs/error_log
               CustomLog logs/access_log {{ '"%{%Y-%m-%d %T}t.%{usec_frac}t %{X-Forwarded-For}i \"%r\" %>s %L %{forensic-id}n"' }}
@@ -94,78 +80,38 @@
 
               UseCanonicalName On
 
-              # Redirect dav-anon to dav
-              #<LocationMatch "/dav-anon/{{ _irods_zone_name }}/((commons/(community_released|cyverse_curated)|home|projects)(/.*)?)" >
-              #  Require expr %{REQUEST_URI} !~ m#^/dav-anon/{{ _irods_zone_name }}/home(/[^/]*/?)?$#
-              #
-              #  RequestHeader set Authorization "Basic {{ 'anonymous' | b64encode }}"
-              #
-              #  ProxyPassMatch http://127.0.0.1/dav/{{ _irods_zone_name }}/$1 retry=0
-              #  ProxyHTMLURLMap ^((http://)?[^/]*)/dav/ $1/dav-anon/ [R]
-              #
-              #  <If "%{REQUEST_METHOD} == 'PROPFIND'">
-              #    SetOutputFilter Sed
-              #    OutputSed "s,/dav/,/dav-anon/,g"
-              #  </If>
-              #
-              #  Header edit Location ^(.*)/dav $1/dav-anon
-              #</LocationMatch>
-            comment: The WebDAV host
+              RewriteEngine On
+              RewriteCond %{REQUEST_METHOD} ^(PUT|POST|DELETE)
+              RewriteRule .* - [F]
+            comment: Vhost for accessing Local iRODS Resource Server's content
             locations:
-              #- path: /dav/{{ _irods_zone_name }}/commons/community_released
-              #  comment: Anonymous read-only access to the community released data
-              #  extra_parameters: |
-              #    {% from 'davrods.j2' import davrods with context %}
-              #    RedirectPermanent \
-              #      /dav/{{ _irods_zone_name }}/commons/community_released/commons_repo/curated \
-              #      /dav/{{ _irods_zone_name }}/commons/cyverse_curated
-              #
-              #    {{ davrods('/' ~ _irods_zone_name ~ '/home/shared', 'community-head.html') }}
-              #- path: /dav/{{ _irods_zone_name }}/commons/cyverse_curated
-              #  comment: Anonymous read-only access to the data curated by CyVerse
-              #  extra_parameters: |
-              #    {% from 'davrods.j2' import davrods with context %}
-              #    {{ davrods('/' ~ _irods_zone_name ~ '/home/shared/commons_repo/curated',
-              #               'curated-head.html') }}
-              - path: /dav/{{ _irods_zone_name }}/home
-                comment: Authenticated read-write access to the home collection
-                extra_parameters: |
-                  {% from 'davrods.j2' import davrods with context %}
-                  #RedirectPermanent /dav/{{ _irods_zone_name }}/home/shared \
-                  #                  /dav/{{ _irods_zone_name }}/projects
-                  {{ davrods('Home', 'home-head.html',
-                       [ 'expr %{REQUEST_URI} !~ m#^/dav/' ~ _irods_zone_name ~ '/home(/[^/]*/?)?$# || %{REMOTE_USER} != "anonymous"',
-                         'valid-user' ]) }}
-              - path: /dav/{{ _irods_zone_name }}/projects
-                comment: Authenticated read-write access to the project folders
-                extra_parameters: |
-                  {% from 'davrods.j2' import davrods with context %}
-                  # Redirect read access to local iRODS resource server's data 
-                  <If "%{REQUEST_METHOD} == 'GET' || %{REQUEST_METHOD} == 'HEAD'" >
-                    RedirectPermanent \
-                      /dav/{{ _irods_zone_name }}/projects/commons_repo \
-                      /dav/{{ _irods_zone_name }}/projects_redirected/commons_repo
-                    RedirectPermanent \
-                      /dav/{{ _irods_zone_name }}/projects/eht \
-                      /dav/{{ _irods_zone_name }}/projects_redirected/eht
-                    RedirectPermanent \
-                      /dav/{{ _irods_zone_name }}/projects/bhpire \
-                      /dav/{{ _irods_zone_name }}/projects_redirected/bhpire
-                  </If>
-                  {{ davrods('/' ~ _irods_zone_name ~ '/home/shared', 'projects-head.html',
-                       [ 'valid-user' ]) }}
-              - path: /dav/{{ _irods_zone_name }}/projects_redirected
-                comment: Redirected read access to some project folders stored in local file system
-              - path: /server-status
-                comment: Service status monitoring
-                extra_parameters: |
-                  SetHandler server-status
-                  Require host localhost
-              - path: /server-qos
-                comment: Service QOS monitoring
-                extra_parameters: |
-                  SetHandler qos-viewer
-                  Require host localhost
+              - path: /
+                comment: Read access to some project folders stored in local file system
+
+          - servername: "{{ _canonical_hostname }}"
+            listen_ip: 127.0.0.1
+            extra_parameters: |
+              ErrorLog logs/error_log
+              CustomLog logs/access_log {{ '"%{%Y-%m-%d %T}t.%{usec_frac}t %{X-Forwarded-For}i \"%r\" %>s %L %{forensic-id}n"' }}
+              LogLevel warn
+
+              Header set Access-Control-Allow-Headers "Range"
+              Header set Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+              Header set Access-Control-Allow-Origin "*"
+
+              UseCanonicalName On
+
+              # Redirect read (GET and HEAD) access to local iRODS resource server's data 
+              RewriteEngine On
+              RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)
+              RewriteRule ^/dav/{{ _irods_zone_name }}/projects/eht/(.*)$ http://127.0.0.1:8047/eht/$1 [P,L]
+              RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)
+              RewriteRule ^/dav/{{ _irods_zone_name }}/projects/bhpire/(.*)$ http://127.0.0.1:8047/bhpire/$1 [P,L]
+              
+              # Redirect to data.cyverse.org
+              SSLProxyEngine on
+              RewriteRule ^/(.*)$ https://data.cyverse.org/$1 [P,L]
+            comment: The WebDAV host
 
         apache_vhosts_ssl:
           - servername: "{{ _canonical_hostname }}"
@@ -174,11 +120,6 @@
             certificate_chain_file: "{{ _webdav_tls_chain_file }}"
             extra_parameters: |
               #ServerAlias {{ inventory_hostname }}
-
-              {% if _webdav_access_limit %}
-              QS_LocRequestLimit /dav {{ _webdav_access_limit }}
-
-              {% endif -%}
 
               ErrorLog logs/https_error_log
               CustomLog logs/https_request_log {{ '"%{%Y-%m-%d %T}t.%{usec_frac}t %{SSL_PROTOCOL}x %{SSL_CIPHER}x %a \"%r\" %>s %L %{forensic-id}n"' }}
@@ -228,37 +169,6 @@
     - name: package_facts uses auto, setup for next task
       package_facts:
 
-    - name: install yum versionlock
-      package:
-        name: yum-plugin-versionlock
-        state: present
-    
-    - name: install iRODS package repository signing key
-      rpm_key:
-        key: https://packages.irods.org/irods-signing-key.asc
-
-    - name: install iRODS repository
-      get_url:
-        url: https://packages.irods.org/renci-irods.yum.repo
-        dest: /etc/yum.repos.d/renci-irods.yum.repo
-        timeout: 20
-
-    - name: force import of GPG key
-      shell: |
-        if ! resp="$(yum --assumeyes updateinfo)"; then
-          exit 1
-        fi
-        if [[ "$resp" =~ irods-signing-key ]]; then
-          echo changed
-        fi
-      register: response
-      changed_when: response.stdout == 'changed'
-
-    - name: lock irods-runtime to version 4.2.8
-      yum_versionlock:
-        name: irods-runtime-4.2.8
-        state: present
-          
     - name: build & install mod_ssl-rm_ssl_conf RPM package to remove ssl.conf
       include_tasks: tasks/install_rm_sslconf_rpm.yml
       when: "'mod_ssl-rm_ssl_conf' not in ansible_facts.packages"
@@ -267,7 +177,6 @@
       package:
         name: 
           - mod_proxy_html
-          - mod_qos
           - mod_ssl
 
     - name: update apache modules
@@ -279,22 +188,6 @@
       notify:
         - restart httpd
 
-    - name: install davrods
-      yum:
-        name: https://github.com/UtrechtUniversity/davrods/releases/download/4.2.8_1.5.0/davrods-4.2.8_1.5.0-1.rpm
-        state: present
-    
-    - include_role:
-        name: cyverse.irods_cfg
-        tasks_from: client.yml
-      vars:
-        irods_cfg_environment_file: etc/httpd/irods/irods_environment.json
-        irods_cfg_chown: false
-        irods_cfg_host: "{{ _irods_host_name }}"
-        irods_cfg_zone_name: "{{ _irods_zone_name }}"
-        irods_cfg_zone_user: anonymous
-        irods_cfg_home: /{{ _irods_zone_name }}
-
     - include_tasks: tasks/mk_webdav_dir_head.yml
       vars:
         head_dav_base: "{{ _irods_zone_name }}/{{ item.base }}"
@@ -304,18 +197,10 @@
           base: home
         - file: projects-head.html
           base: projects
-        - file: community-head.html
-          base: commons/community_released
-        - file: curated-head.html
-          base: commons/cyverse_curated
 
     - include_tasks: tasks/install_webdav_html.yml
       vars:
         svc: dav
-
-    - include_tasks: tasks/install_webdav_html.yml
-      vars:
-        svc: dav-anon
 
     - name: add .htpasswd for read access to local iRODS Vault
       copy:
@@ -358,6 +243,7 @@
         content: |
           {% for i in _webdav_allowed_src %}
           -A INPUT -m state --state NEW -p tcp -s {{ i }} --dport 80 -j ACCEPT
+          -A INPUT -m state --state NEW -p tcp -s {{ i }} --dport 8047 -j ACCEPT
           -A INPUT -m state --state NEW -p tcp -s {{ i }} --dport 443 -j ACCEPT
           {% endfor %}
       notify: restart firewall

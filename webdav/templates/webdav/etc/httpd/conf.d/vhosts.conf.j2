@@ -8,7 +8,7 @@
 {%   if vhost.comment is defined %}
 # {{ vhost.comment | wordwrap(78, True, '\n# ') }}
 {%   endif %}
-<VirtualHost {{ vhost.listen_ip | default(apache_listen_ip) }}:{{ apache_listen_port }}>
+<VirtualHost {{ vhost.listen_ip | default(apache_listen_ip) }}:{{ vhost.listen_port | default(apache_listen_port) }}>
   ServerName {{ vhost.servername }}
 {%   if vhost.extra_parameters is defined %}
 
