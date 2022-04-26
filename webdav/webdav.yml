@@ -100,17 +100,26 @@
               Header set Access-Control-Allow-Origin "*"
 
               UseCanonicalName On
+              RewriteEngine On
+              
+              # Add trailing slash
+              RewriteRule ^/dav/{{ _irods_zone_name }}/projects$ /dav/{{ _irods_zone_name }}/projects/ [R=308,L]
+              RewriteRule ^/dav/{{ _irods_zone_name }}/projects/eht$ /dav/{{ _irods_zone_name }}/projects/eht/ [R=308,L]
+              RewriteRule ^/dav/{{ _irods_zone_name }}/projects/bhpire$ /dav/{{ _irods_zone_name }}/projects/bhpire/ [R=308,L]
+              
 
               # Redirect read (GET and HEAD) access to local iRODS resource server's data 
-              RewriteEngine On
               RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)
               RewriteRule ^/dav/{{ _irods_zone_name }}/projects/eht/(.*)$ http://127.0.0.1:8047/eht/$1 [P,L]
               RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)
               RewriteRule ^/dav/{{ _irods_zone_name }}/projects/bhpire/(.*)$ http://127.0.0.1:8047/bhpire/$1 [P,L]
               
-              # Redirect to data.cyverse.org
               SSLProxyEngine on
-              RewriteRule ^/(.*)$ https://data.cyverse.org/$1 [P,L]
+              # directory listing on projects root directory should be proxied to data.cyverse.org as users can move to eht or bhpire subdirectories subsequently
+              RewriteRule ^/dav/{{ _irods_zone_name }}/projects/$ https://data.cyverse.org/dav/iplant/projects/ [P,L]
+
+              # Other projects directories should be permanantly redirected to data.cyverse.org
+              RewriteRule ^/dav/{{ _irods_zone_name }}/projects/(.*)$ https://data.cyverse.org/dav/iplant/projects/$1 [R=308,L]
             comment: The WebDAV host
 
         apache_vhosts_ssl:
