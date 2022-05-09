@@ -4,6 +4,7 @@ canonical_hostname: pire.cyverse.org
 irods_host_name: data.cyverse.org
 irods_port: 1247
 irods_zone_name: iplant
+irods_user_group: pire
 irods_ldap_cache_timeout: 300
 irods_ldap_host_name: 127.0.0.1
 irods_ldap_port: 1389
