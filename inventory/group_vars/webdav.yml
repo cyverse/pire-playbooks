@@ -2,7 +2,13 @@
 canonical_hostname: pire.cyverse.org
 
 irods_host_name: data.cyverse.org
+irods_port: 1247
 irods_zone_name: iplant
+irods_user_group: pire
+irods_ldap_cache_timeout: 300
+irods_ldap_host_name: 127.0.0.1
+irods_ldap_port: 1389
+irods_ldap_basedn: "dc=iplantcollaborative,dc=org"
 
 webdav_tls_chain_file: "/etc/pki/tls/certs/gd_bundle_g2-g1.crt"
 webdav_tls_key_file: "/etc/pki/tls/private/cyverse.key"
