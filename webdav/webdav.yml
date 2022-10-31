@@ -120,6 +120,10 @@
 
               # Other projects directories should be permanantly redirected to data.cyverse.org
               RewriteRule ^/dav/{{ _irods_zone_name }}/projects/(.*)$ https://data.cyverse.org/dav/iplant/projects/$1 [R=308,L]
+
+              # User home directories should be permanantly redirected to data.cyverse.org
+              RewriteRule ^/dav/{{ _irods_zone_name }}/home$ https://data.cyverse.org/dav/{{ _irods_zone_name }}/home [R=308,L]
+              RewriteRule ^/dav/{{ _irods_zone_name }}/home/(.*)$ https://data.cyverse.org/dav/{{ _irods_zone_name }}/home/$1 [R=308,L]
             comment: The WebDAV host
 
         apache_vhosts_ssl:
