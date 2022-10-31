@@ -4,16 +4,6 @@
   become: true
   collections:
     - community.general
-  vars:
-    projects_redirected_htpasswd: |
-      iychoi:$apr1$EP4KsytS$eOGc7ZAZujFM0uyy6viV51
-
-    projects_redirected_htaccess: |
-      AuthName {{ _webdav_auth_name }}
-      AuthType Basic
-      AuthUserFile {{ _webdav_local_irods_vault_project_path }}/.htpasswd
-      Require valid-user
-
   roles:
     - role: geerlingguy.apache
       vars:
@@ -35,10 +25,16 @@
             LoadModule unique_id_module modules/mod_unique_id.so
           </IfModule>
 
-          <IfModule mpm_worker_module>
-            ServerLimit             {{ _webdav_server_limit }}
-            ThreadsPerChild         {{ _webdav_threads_per_child }}
-            MaxRequestWorkers       {{ _webdav_max_request_workers }}
+          <IfModule !mpm_worker_module>
+            LoadModule mpm_worker_module modules/mod_mpm_worker.so
+          </IfModule>
+
+          <IfModule !authnz_ldap_module>
+            LoadModule authnz_ldap_module modules/mod_authnz_ldap.so
+          </IfModule>
+
+          <IfModule !ldap_module>
+            LoadModule ldap_module modules/mod_ldap.so
           </IfModule>
 
           ForensicLog logs/forensic_log
@@ -57,17 +53,32 @@
           ProxyHTMLLinks a href
           ProxyHTMLLinks base href
 
+          ServerLimit {{ _webdav_server_limit }}
+          ThreadsPerChild {{ _webdav_threads_per_child }}
+          MaxRequestWorkers {{ _webdav_max_request_workers }}
+
+          LDAPSharedCacheSize 500000
+          LDAPCacheEntries 1024
+          LDAPCacheTTL 600
+          LDAPOpCacheEntries 1024
+          LDAPOpCacheTTL 600
+
         apache_vhosts:
           - servername: "{{ _canonical_hostname }}"
             listen_ip: 127.0.0.1
             listen_port: 8047
             extra_parameters: |
-              DocumentRoot {{ _webdav_local_irods_vault_project_path }}
-
+              DocumentRoot {{ _webdav_local_irods_vault_project_path }}              
               <Directory {{ _webdav_local_irods_vault_project_path }}>
                 Require all granted
                 AllowOverride All
                 Options +Indexes
+
+                AuthName {{ _webdav_auth_name }}
+                AuthType Basic
+                AuthBasicProvider ldap
+                AuthLDAPURL "ldap://127.0.0.1:{{ _irods_ldap_port }}/{{ _irods_ldap_basedn }}?uid?one"
+                Require valid-user
               </Directory>
 
               ErrorLog logs/error_log
@@ -116,10 +127,10 @@
               
               SSLProxyEngine on
               # directory listing on projects root directory should be proxied to data.cyverse.org as users can move to eht or bhpire subdirectories subsequently
-              RewriteRule ^/dav/{{ _irods_zone_name }}/projects/$ https://data.cyverse.org/dav/iplant/projects/ [P,L]
+              RewriteRule ^/dav/{{ _irods_zone_name }}/projects/$ https://data.cyverse.org/dav/{{ _irods_zone_name }}/projects/ [P,L]
 
               # Other projects directories should be permanantly redirected to data.cyverse.org
-              RewriteRule ^/dav/{{ _irods_zone_name }}/projects/(.*)$ https://data.cyverse.org/dav/iplant/projects/$1 [R=308,L]
+              RewriteRule ^/dav/{{ _irods_zone_name }}/projects/(.*)$ https://data.cyverse.org/dav/{{ _irods_zone_name }}/projects/$1 [R=308,L]
 
               # User home directories should be permanantly redirected to data.cyverse.org
               RewriteRule ^/dav/{{ _irods_zone_name }}/home$ https://data.cyverse.org/dav/{{ _irods_zone_name }}/home [R=308,L]
@@ -150,6 +161,8 @@
                 # When varnish-cache is configured, this should be commented out for caching
                 # RequestHeader merge Cache-Control no-store
               </Elseif>
+
+              RequestHeader edit Destination ^https: http: early
 
               ProxyPass / http://127.0.0.1/ retry=0 timeout=300
               ProxyHTMLURLMap ^http: https: [R]
@@ -191,6 +204,7 @@
         name: 
           - mod_proxy_html
           - mod_ssl
+          - mod_ldap
 
     - name: update apache modules
       copy:
@@ -215,23 +229,6 @@
       vars:
         svc: dav
 
-    - name: add .htpasswd for read access to local iRODS Vault
-      copy:
-        content: "{{ projects_redirected_htpasswd }}"
-        dest: "{{ _webdav_local_irods_vault_project_path }}/.htpasswd"
-        owner: irods
-        group: irods
-        mode: "0644"
-        force: no
-      
-    - name: add .htaccess for read access to local iRODS Vault
-      copy:
-        content: "{{ projects_redirected_htaccess }}"
-        dest: "{{ _webdav_local_irods_vault_project_path }}/.htaccess"
-        owner: irods
-        group: irods
-        mode: "0644"
-
     - name: add root web page
       copy:
         src: files/webdav/var/www/html/index.html
@@ -247,6 +244,89 @@
       file:
         path: /etc/systemd/system/httpd.service.requires
         state: directory
+
+    - name: delete stale build dir for ldap-irods-auth package if exists
+      file:
+        path: /tmp/ldap_irods_auth_setup
+        state: absent
+
+    - name: check if ldap-irods-auth is already installed
+      stat: 
+        path: /usr/bin/ldap-irods-auth
+      register: ldapirodsauthResp
+
+    - name: check ldap-irods-auth version
+      shell: /usr/bin/ldap-irods-auth -v | grep 'serviceVersion' | tr -d '",' | awk '{print $2}'
+      register: ldapirodsauthVersion
+      when: ldapirodsauthResp.stat.exists
+      changed_when: false
+
+    - name: check ldapirodsauth service account
+      shell: id ldapirodsauth
+      register: ldapirodsauthAccount
+      failed_when: false
+      changed_when: false
+
+    - when: (not ldapirodsauthResp.stat.exists) or (ldapirodsauthAccount.rc != 0) or (ldapirodsauthVersion.stdout != 'v0.1.1')
+      block:
+        - name: check if ldap-irods-auth service exists
+          stat: 
+            path: /usr/lib/systemd/system/ldap-irods-auth.service
+          register: serviceResp
+
+        - name: stop ldap-irods-auth service if running
+          service:
+            name: ldap-irods-auth
+            state: stopped
+          when: serviceResp.stat.exists
+
+        - name: create build dir for ldap-irods-auth package 
+          file:
+            path: /tmp/ldap_irods_auth_setup
+            state: directory
+
+        - name: download ldap-irods-auth package from github and uncompress
+          unarchive:
+            src: https://github.com/cyverse/ldap-irods-auth/releases/download/v0.1.1/ldap_irods_auth_0.1.1.tar.gz
+            dest: /tmp/ldap_irods_auth_setup
+            remote_src: True
+          register: unarchiveResp
+
+        - name: install ldap-irods-auth service
+          when: unarchiveResp is changed
+          make: 
+            chdir: /tmp/ldap_irods_auth_setup
+            target: install_centos
+
+        - name: delete build dir for ldap-irods-auth package
+          file:
+            path: /tmp/ldap_irods_auth_setup
+            state: absent
+    
+    - name: configure ldap-irods-auth
+      template:
+        src: templates/webdav/etc/ldap-irods-auth/ldap-irods-auth.conf.j2
+        dest: /etc/ldap-irods-auth/ldap-irods-auth.conf
+        owner: ldapirodsauth
+        mode: 0660
+      notify:
+        - restart ldap-irods-auth
+
+    - name: setup ldap-irods-auth service
+      copy:
+        src: files/webdav/usr/lib/systemd/system/ldap-irods-auth.service
+        dest: /usr/lib/systemd/system
+      with_items:
+        - ldap-irods-auth.service
+      notify:
+        - reload systemd
+        - restart ldap-irods-auth
+
+    - name: ensure ldap-irods-auth runs when apache run
+      file:
+        path: /etc/systemd/system/httpd.service.requires/ldap-irods-auth.service
+        src: /usr/lib/systemd/system/ldap-irods-auth.service
+        state: link
 
     - name: open HTTP connection in firewall
       blockinfile:
@@ -277,4 +357,10 @@
       when: notifications_enabled | default(false)
       service:
         name: httpd
+        state: restarted
+
+    - name: restart ldap-irods-auth
+      when: notifications_enabled | default(false)
+      service:
+        name: ldap-irods-auth
         state: restarted
