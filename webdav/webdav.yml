@@ -129,8 +129,8 @@
               RewriteRule ^/dav/{{ _irods_zone_name }}/projects/$ https://data.cyverse.org/dav/{{ _irods_zone_name }}/projects/ [P,L]
               
               # Other operations (PUT, DELETE, POST, PROPFIND) should be proxied to data.cyverse.org
-              RewriteRule ^/dav/{{ _irods_zone_name }}/(projects|home/shared)/eht/(.*)$ http://data.cyverse.org/dav/{{ _irods_zone_name }}/projects/eht/$2 [P,L]
-              RewriteRule ^/dav/{{ _irods_zone_name }}/(projects|home/shared)/bhpire/(.*)$ http://data.cyverse.org/dav/{{ _irods_zone_name }}/projects/bhpire/$2 [P,L]
+              RewriteRule ^/dav/{{ _irods_zone_name }}/(projects|home/shared)/eht/(.*)$ https://data.cyverse.org/dav/{{ _irods_zone_name }}/projects/eht/$2 [P,L]
+              RewriteRule ^/dav/{{ _irods_zone_name }}/(projects|home/shared)/bhpire/(.*)$ https://data.cyverse.org/dav/{{ _irods_zone_name }}/projects/bhpire/$2 [P,L]
 
 
               # Other projects directories should be permanantly redirected to data.cyverse.org
