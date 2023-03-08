@@ -56,6 +56,8 @@
           ServerLimit {{ _webdav_server_limit }}
           ThreadsPerChild {{ _webdav_threads_per_child }}
           MaxRequestWorkers {{ _webdav_max_request_workers }}
+          MinSpareThreads {{ _webdav_min_spare_threads }}
+
 
           LDAPSharedCacheSize 500000
           LDAPCacheEntries 1024

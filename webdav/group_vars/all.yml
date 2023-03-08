@@ -13,9 +13,10 @@ _irods_ldap_basedn: "{{ irods_ldap_basedn | default('dc=iplantcollaborative,dc=o
 
 _webdav_allowed_src: "{{ webdav_allowed_src | default(['0.0.0.0/0']) }}"
 _webdav_auth_name: "{{ webdav_auth_name | default('CyVerse') }}"
-_webdav_max_request_workers: "{{ webdav_max_request_workers | default(192) }}"
-_webdav_server_limit: "{{ webdav_server_limit | default(48) }}"
-_webdav_threads_per_child: "{{ webdav_threads_per_child | default(4) }}"
+_webdav_max_request_workers: "{{ webdav_max_request_workers | default(1024) }}"
+_webdav_server_limit: "{{ webdav_server_limit | default(32) }}"
+_webdav_threads_per_child: "{{ webdav_threads_per_child | default(32) }}"
+_webdav_min_spare_threads: "{{ webdav_min_spare_threads | default(250) }}"
 _webdav_tls_cert_file: "{{ webdav_tls_cert_file | default('/etc/ssl/certs/dummy.crt') }}"
 _webdav_tls_chain_file: "{{ webdav_tls_chain_file | default('/etc/ssl/certs/dummy-chain.crt') }}"
 _webdav_tls_key_file: "{{ webdav_tls_key_file | default('/etc/ssl/certs/dummy.key') }}"
