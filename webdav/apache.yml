@@ -56,8 +56,8 @@
           ServerLimit {{ _webdav_server_limit }}
           ThreadsPerChild {{ _webdav_threads_per_child }}
           MaxRequestWorkers {{ _webdav_max_request_workers }}
-          MinSpareThreads {{ _webdav_min_spare_threads }}
 
+          QS_ErrorResponseCode 429
 
           LDAPSharedCacheSize 500000
           LDAPCacheEntries 1024
@@ -70,6 +70,8 @@
             listen_ip: 127.0.0.1
             listen_port: 8047
             extra_parameters: |
+              QS_LocRequestLimit /dav 300
+
               DocumentRoot {{ _webdav_local_irods_vault_project_path }}              
               <Directory {{ _webdav_local_irods_vault_project_path }}>
                 Require all granted
@@ -104,6 +106,8 @@
           - servername: "{{ _canonical_hostname }}"
             listen_ip: 127.0.0.1
             extra_parameters: |
+              QS_LocRequestLimit /dav 500
+
               ErrorLog logs/error_log
               CustomLog logs/access_log {{ '"%{%Y-%m-%d %T}t.%{usec_frac}t %{X-Forwarded-For}i \"%r\" %>s %L %{forensic-id}n"' }}
               LogLevel warn
@@ -142,6 +146,17 @@
               RewriteRule ^/dav/{{ _irods_zone_name }}/home$ https://data.cyverse.org/dav/{{ _irods_zone_name }}/home [R=308,L]
               RewriteRule ^/dav/{{ _irods_zone_name }}/home/(.*)$ https://data.cyverse.org/dav/{{ _irods_zone_name }}/home/$1 [R=308,L]
             comment: The WebDAV host
+            locations:
+              - path: /server-status
+                comment: Service status monitoring
+                extra_parameters: |
+                  SetHandler server-status
+                  Require host localhost
+              - path: /server-qos
+                comment: Service QOS monitoring
+                extra_parameters: |
+                  SetHandler qos-viewer
+                  Require host localhost
 
         apache_vhosts_ssl:
           - servername: "{{ _canonical_hostname }}"
@@ -149,6 +164,8 @@
             certificate_key_file: "{{ _webdav_tls_key_file }}"
             certificate_chain_file: "{{ _webdav_tls_chain_file }}"
             extra_parameters: |
+              QS_LocRequestLimit /dav 500
+
               #ServerAlias {{ inventory_hostname }}
 
               ErrorLog logs/https_error_log
@@ -209,6 +226,7 @@
       package:
         name: 
           - mod_proxy_html
+          - mod_qos
           - mod_ssl
           - mod_ldap
 
